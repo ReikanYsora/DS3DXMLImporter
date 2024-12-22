@@ -52,11 +52,11 @@ public class Loader : MonoBehaviour
     private Mesh CreateMesh(TransformDefinition element)
     {
         Mesh mesh = new Mesh();
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         mesh.vertices = element.Vertices.ToArray();
         mesh.normals = element.Normals.ToArray();
         mesh.colors = element.Colors.ToArray();
         mesh.triangles = element.Triangles.ToArray();
-        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 
         return mesh;
     }
