@@ -1,15 +1,18 @@
 using DS3DXMLImporter;
 using DS3DXMLImporter.Models;
 using DS3DXMLImporter.Models.Unity;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using static UnityEditor.Progress;
+using UnityEngine.Rendering;
 
 public class Loader : MonoBehaviour
 {
     private const string PATH_TEST = "C:\\Users\\jcrem\\Desktop\\3DXML\\V6\\XMLtess_prd-ADCO01-02446340_00_A.1_BATTERY_A6_BATTERY_DMU_BASELINE_Not_mature_In Work_BsF_(1).3dxml";
     public Material VertexColor;
+    private Dictionary<string, Mesh> _meshes = new Dictionary<string, Mesh>();
 
     private void Start()
     {
@@ -52,7 +55,7 @@ public class Loader : MonoBehaviour
     private Mesh CreateMesh(TransformDefinition element)
     {
         Mesh mesh = new Mesh();
-        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        mesh.indexFormat = element.Vertices.Count > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
         mesh.vertices = element.Vertices.ToArray();
         mesh.normals = element.Normals.ToArray();
         mesh.colors = element.Colors.ToArray();
