@@ -76,7 +76,7 @@ namespace DS3DXMLImporter.Parsers
 
             Position = new Vector3(_tx, _ty, _tz);
             Quaternion tempRotation = Quaternion.LookRotation(new Vector3(_zx, _zy, _zz), new Vector3(_yx, _yy, _yz));
-            Rotation = new Quaternion(tempRotation.x, tempRotation.z, tempRotation.y, -tempRotation.w);
+            Rotation = new Quaternion(tempRotation.x, tempRotation.y, tempRotation.z, -tempRotation.w);
 
             positionTokens = null;
             rotationsStr = null;

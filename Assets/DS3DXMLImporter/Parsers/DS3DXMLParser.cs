@@ -7,7 +7,6 @@ using DS3XMLImporter.Models.Interfaces;
 using DS3XMLImporter.Parsers;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,6 +22,7 @@ namespace DS3DXMLImporter.Parsers
         private IList<InstanceRep> _instancesRep;
         private IList<Reference3D> _references3D;
         private IList<Instance3D> _instances3D;
+        private Dictionary<string, MeshDefinition> _meshDefinitions;
         #endregion
 
         #region EVENTS
@@ -40,28 +40,33 @@ namespace DS3DXMLImporter.Parsers
         {
             Task.Factory.StartNew(() =>
             {
-                IDS3DXMLArchive fileArchive = DS3DXMLFile.Create(stream);
-                XDocument xmlManifest = ReadManifest(fileArchive);
+                try
+                {
+                    IDS3DXMLArchive fileArchive = DS3DXMLFile.Create(stream);
+                    XDocument xmlManifest = ReadManifest(fileArchive);
 
-                _header = ParserHelper.GetHeader(xmlManifest);
-                _referencesRep = ParseReferenceRep(xmlManifest, fileArchive);
-                _instancesRep = ParseInstanceRep(xmlManifest);
-                _references3D = ParseReference3D(xmlManifest);
-                _instances3D = ParseInstance3D(xmlManifest);
+                    _header = ParserHelper.GetHeader(xmlManifest);
+                    _referencesRep = ParseReferenceRep(xmlManifest, fileArchive);
+                    _instancesRep = ParseInstanceRep(xmlManifest);
+                    _references3D = ParseReference3D(xmlManifest);
+                    _instances3D = ParseInstance3D(xmlManifest);
+                    _meshDefinitions = ConvertToMeshDefinitions(_referencesRep);
 
-                Reference3D product = Get<Reference3D>(1);
-                IEnumerable<TransformDefinition> transformParts = Traverse(product, null).ToList();
+                    DS3DXMLStructure structure = new DS3DXMLStructure(
+                        _header,
+                        _referencesRep.ToDictionary(x => x.ID, y => y),
+                        _instancesRep.ToDictionary(x => x.ID, y => y),
+                        _references3D.ToDictionary(x => x.ID, y => y),
+                        _instances3D.ToDictionary(x => x.ID, y => y),
+                        _meshDefinitions
+                    );
 
-                DS3DXMLStructure structure = new DS3DXMLStructure(
-                    _header,
-                    _referencesRep.ToDictionary(x => x.ID, y => y),
-                    _instancesRep.ToDictionary(x => x.ID, y => y),
-                    _references3D.ToDictionary(x => x.ID, y => y),
-                    _instances3D.ToDictionary(x => x.ID, y => y),
-                    transformParts.ToList()
-                );
-
-                OnParseCompleted?.Invoke(structure);
+                    OnParseCompleted?.Invoke(structure);
+                }
+                catch (Exception ex)
+                {
+                    UnityEngine.Debug.LogError(ex);
+                }
             });
         }
 
@@ -92,34 +97,16 @@ namespace DS3DXMLImporter.Parsers
             throw new TypeNotFoundException(type.Name);
         }
 
-        private IList<T> Aggregated<T>(int aggregatedBy)
+        private Dictionary<string, MeshDefinition> ConvertToMeshDefinitions(IEnumerable<ReferenceRep> referenceReps)
         {
-            Type type = typeof(T);
+            Dictionary<string, MeshDefinition> meshDefinitions = new Dictionary<string, MeshDefinition>();
 
-            if (type == typeof(Instance3D))
+            foreach (ReferenceRep referenceRep in referenceReps)
             {
-                IEnumerable<Instance3D> tempInstance3D = _instances3D.Where(x => x.AggregatedBy == aggregatedBy);
-
-                return tempInstance3D.Select(x => (T)Convert.ChangeType(x, type)).ToList();
-            }
-            else if (type == typeof(InstanceRep))
-            {
-                IEnumerable<InstanceRep> tempInstanceRep = _instancesRep.Where(x => x.AggregatedBy == aggregatedBy);
-
-                return tempInstanceRep.Select(x => (T)Convert.ChangeType(x, type)).ToList();
+                meshDefinitions.Add(referenceRep.AssociatedFile, MeshDefinition.FromReferenceRep(referenceRep));
             }
 
-            throw new TypeNotFoundException(type.Name);
-        }
-
-        private IEnumerable<TransformDefinition> Traverse(Reference3D ref3D, Instance3D instance3D)
-        {
-            IList<Instance3D> instance3Ds = Aggregated<Instance3D>(ref3D.ID);
-            IList<InstanceRep> instanceReps = Aggregated<InstanceRep>(ref3D.ID);
-
-            IEnumerable<ReferenceRep> referenceReps = instanceReps.Select(x => Get<ReferenceRep>(x.InstanceOf));
-
-            return referenceReps.Select(referenceRep => TransformDefinition.FromReferenceRep(referenceRep, instance3D)).Concat(instance3Ds.SelectMany(instance => Traverse(Get<Reference3D>(instance.InstanceOf), instance)));
+            return meshDefinitions;
         }
 
         private IList<Reference3D> ParseReference3D(XDocument document)

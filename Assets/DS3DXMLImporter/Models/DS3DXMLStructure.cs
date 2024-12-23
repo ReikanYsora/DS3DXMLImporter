@@ -1,6 +1,10 @@
 ﻿using DS3DXMLImporter.Models.Unity;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml.Linq;
+using UnityEngine;
+using UnityEngine.UIElements;
+using static Unity.VisualScripting.Metadata;
 
 namespace DS3XMLImporter.Models
 {
@@ -9,7 +13,7 @@ namespace DS3XMLImporter.Models
         #region PROPERTIES
         public DS3DXMLHeader Header { get; set; }
 
-        public IList<TransformDefinition> TransformDefinitions { get; private set; }
+        public Dictionary<string, MeshDefinition> MeshDefinitions { get; private set; }
 
         public ProductStructureElement Root { get; private set; }
 
@@ -23,17 +27,32 @@ namespace DS3XMLImporter.Models
         #endregion
 
         #region CONSTRUCTOR
-        public DS3DXMLStructure(DS3DXMLHeader header, Dictionary<int, ReferenceRep> referencesRep, Dictionary<int, InstanceRep> instancesRep, Dictionary<int, Reference3D> references3D, Dictionary<int, Instance3D> instances3D, IList<TransformDefinition> transformDefinitions)
+        public DS3DXMLStructure(DS3DXMLHeader header, Dictionary<int, ReferenceRep> referencesRep, Dictionary<int, InstanceRep> instancesRep, Dictionary<int, Reference3D> references3D, Dictionary<int, Instance3D> instances3D, Dictionary<string, MeshDefinition> meshDefinitions)
         {
             Header = header;    
             ReferencesRep = referencesRep;
             InstancesRep = instancesRep;
             References3D = references3D;
             Instances3D = instances3D;
-            TransformDefinitions = transformDefinitions;
+            MeshDefinitions = meshDefinitions;
 
             Reference3D ref3DTopParent = References3D.Values.OrderBy(x => x.ID).FirstOrDefault();
-            Root = new ProductStructureElement(ref3DTopParent.ID, ref3DTopParent.Name);
+            Root = new ProductStructureElement();
+            Root.ID = ref3DTopParent.ID;
+
+            if (instances3D.ContainsKey(ref3DTopParent.ID))
+            {
+                Root.Position = instances3D[ref3DTopParent.ID].Position;
+                Root.Rotation = instances3D[ref3DTopParent.ID].Rotation;
+                Root.Name = instances3D[ref3DTopParent.ID].Name;
+            }
+            else
+            {
+                Root.Position = Vector3.zero;
+                Root.Rotation = Quaternion.identity;
+                Root.Name = ref3DTopParent.Name;
+            }
+
             Root.Children = CreateTreeStructure(Root);
         }
         #endregion
@@ -50,13 +69,20 @@ namespace DS3XMLImporter.Models
                 {
                     Reference3D tempRef3D = References3D[child3DInstance.InstanceOf];
                     List<int> children3DIds = InstancesRep.Where(x => x.Value.AggregatedBy == child3DInstance.InstanceOf).Select(x => x.Value.InstanceOf).ToList();
-                    ProductStructureElement childPart = new ProductStructureElement(tempRef3D.ID, tempRef3D.Name);
+                    ProductStructureElement childPart = new ProductStructureElement
+                    {
+                        ID = tempRef3D.ID,
+                        Name = child3DInstance.Name,
+                        Position = child3DInstance.Position,
+                        Rotation = child3DInstance.Rotation
+                    };
 
                     foreach (int child3DId in children3DIds)
                     {
                         if (ReferencesRep.ContainsKey(child3DId))
                         {
-                            childPart.TransformDefinition = TransformDefinitions.Where(x => x.InstanceID == child3DInstance.ID).FirstOrDefault();
+                            ReferenceRep tempReferenceRep = ReferencesRep[child3DId];
+                            childPart.MeshDefinition = MeshDefinitions.Where(x => x.Value.AssociatedFile == tempReferenceRep.AssociatedFile).Select(x => x.Value).FirstOrDefault();
                             break;
                         }
                     }
