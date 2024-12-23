@@ -1,5 +1,4 @@
-﻿using DS3DXMLImporter.Exceptions;
-using DS3DXMLImporter.Models;
+﻿using DS3DXMLImporter.Models;
 using DS3XMLImporter.Models;
 using DS3XMLImporter.Models.Interfaces;
 using DS3XMLImporter.Parsers;
@@ -21,30 +20,9 @@ namespace DS3DXMLImporter.Parsers
             IList<ReferenceRep> referenceReps = new List<ReferenceRep>();
             IEnumerable<XElement> xmlReferenceReps = xml.Root.Descendants("{http://www.3ds.com/xsd/3DXML}ReferenceRep");
 
-            if (true) //xmlReferenceReps.All(x => x.Attribute("format").Value == "TESSELLATED"))
+            foreach (XElement rep in xmlReferenceReps)
             {
-                foreach (XElement rep in xmlReferenceReps)
-                {
-                    referenceReps.Add(ParseReferenceRep(rep, archive));
-                }
-            }
-            else
-            {
-                try
-                {
-                    string format = xmlReferenceReps.Descendants("ReferenceRep").First().Attribute("format").Value;
-
-                    if (format.Length <= 0)
-                    {
-                        throw new ArgumentException("The given file does not hold any information about Reference3DReps, please make sure the file archive is valid.");
-                    }
-
-                    throw new UnsupportedFormatException(string.Format(@"The importer cant understand the given 3DReferenceRep format {0}.Try using a representation with a supported format or contact the developers.", format));
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
+                referenceReps.Add(ParseReferenceRep(rep, archive));
             }
 
             return referenceReps;
@@ -72,25 +50,31 @@ namespace DS3DXMLImporter.Parsers
                     case "version":
                         referenceRep.Version = attribut.Value;
                         break;
+                    case "format":
+                        referenceRep.Format = attribut.Value;
+                        break;
+                    case "usage":
+                        referenceRep.Usage = attribut.Value;
+                        break;
                     case "associatedfile":
                         referenceRep.AssociatedFile = attribut.Value;
                         break;
                 }
             }
 
-            referenceRep.MeshProperty = GetMeshProperty(refRep3DXMLElement, referenceRep.AssociatedFile, archive);
+            referenceRep.TriangleGeometries = GetGeometry(refRep3DXMLElement, referenceRep.AssociatedFile, archive);
 
             return referenceRep;
         }
 
-        private static MeshProperty GetMeshProperty(XElement threeDReferenceRepXmlElement, string nameOfExternalRepFileDiscription, IDS3DXMLArchive archive)
+        private static IList<TriangleGeometry> GetGeometry(XElement threeDReferenceRepXmlElement, string nameOfExternalRepFileDescription, IDS3DXMLArchive archive)
         {
             XDocument xmlReferenceRep;
             IList<TriangleGeometry> triangles = new List<TriangleGeometry>();
 
-            if (nameOfExternalRepFileDiscription != null && nameOfExternalRepFileDiscription.Any())
+            if (nameOfExternalRepFileDescription != null && nameOfExternalRepFileDescription.Any())
             {
-                xmlReferenceRep = archive.GetNextDocument(ParserHelper.CleanUpFileName(nameOfExternalRepFileDiscription));
+                xmlReferenceRep = archive.GetNextDocument(ParserHelper.CleanUpFileName(nameOfExternalRepFileDescription));
             }
             else
             {
@@ -116,7 +100,7 @@ namespace DS3DXMLImporter.Parsers
                 }
             }
 
-            return new MeshProperty(triangles);
+            return triangles;
         }
 
         private static IList<TriangleGeometry> GetTriangles(XElement face, IList<Vector3> verticies, IList<Vector3> normals)
@@ -176,7 +160,7 @@ namespace DS3DXMLImporter.Parsers
             }
 
             XElement surfaceAttributes = face.Element("{http://www.3ds.com/xsd/3DXML}SurfaceAttributes");
-            Vector4 color = new Vector4(0f, 0f, 0f, 0f);
+            Color color = new Color(0f, 0f, 0f, 0f);
 
             if (surfaceAttributes != null)
             {
@@ -188,11 +172,11 @@ namespace DS3DXMLImporter.Parsers
                     float green = float.Parse(colorElement.Attribute("green").Value, CultureInfo.InvariantCulture);
                     float blue = float.Parse(colorElement.Attribute("blue").Value, CultureInfo.InvariantCulture);
                     float alpha = float.Parse(colorElement.Attribute("alpha").Value, CultureInfo.InvariantCulture);
-                    color = new Vector4(red, green, blue, alpha);
+                    color = new Color(red, green, blue, alpha);
                 }
             }
 
-            IList<Vector4> colors = new List<Vector4>();
+            IList<Color> colors = new List<Color>();
 
             for (int i = 0; i < verticies.Count; i++)
             {
@@ -244,7 +228,7 @@ namespace DS3DXMLImporter.Parsers
                 .ToList();
         }
 
-        private static IList<TriangleGeometry> FanToTriangles(IList<int> indices, IList<Vector3> verticies, IList<Vector3> normals, IList<Vector4> colors)
+        private static IList<TriangleGeometry> FanToTriangles(IList<int> indices, IList<Vector3> verticies, IList<Vector3> normals, IList<Color> colors)
         {
             int center = indices[0];
             List<TriangleGeometry> list = new List<TriangleGeometry>();

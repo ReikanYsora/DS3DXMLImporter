@@ -3,7 +3,6 @@ using DS3XMLImporter.Models.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
@@ -22,10 +21,6 @@ namespace DS3XMLImporter.Parsers
         public static DS3DXMLHeader GetHeader(XDocument xmlDocument)
         {
             DS3DXMLHeader header = new DS3DXMLHeader();
-
-            XmlNamespaceManager namespaceManager = new XmlNamespaceManager(new NameTable());
-            namespaceManager.AddNamespace("3dxml", "http://www.3ds.com/xsd/3DXML");
-
             IEnumerable<XElement> xmlHeader = xmlDocument.Root.Element("{http://www.3ds.com/xsd/3DXML}Header").Elements();
 
             if (xmlHeader == null)

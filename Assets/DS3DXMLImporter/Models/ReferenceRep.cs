@@ -1,4 +1,5 @@
 ﻿using DS3DXMLImporter.Models;
+using System.Collections.Generic;
 
 namespace DS3XMLImporter.Models
 {
@@ -19,7 +20,7 @@ namespace DS3XMLImporter.Models
 
         public string AssociatedFile { get; set; }
 
-        public MeshProperty MeshProperty { get; set; }
+        public IList<TriangleGeometry> TriangleGeometries { get; set; }
         #endregion
     }
 }

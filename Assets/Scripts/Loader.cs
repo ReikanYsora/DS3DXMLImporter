@@ -1,9 +1,8 @@
-using DS3DXMLImporter;
-using DS3DXMLImporter.Models;
+using DS3DXMLImporter.Loaders;
 using DS3DXMLImporter.Models.Unity;
-using System.Collections;
+using DS3DXMLImporter.Parsers;
+using DS3XMLImporter.Models;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -16,21 +15,30 @@ public class Loader : MonoBehaviour
 
     private void Start()
     {
-        DS3DXMLV6Importer manager = new DS3DXMLV6Importer(PATH_TEST);
+        DS3DXMLParser parser = new DS3DXMLParser();
+        parser.OnParseCompleted += OnParseCompleted;
 
-        GameObject parent = new GameObject("Import");
-        CreateElement(manager.Root, parent.transform);
+        ILoader loader = LoaderFactory.CreateFileLoader(PATH_TEST);
+        parser.ParseStructure(loader);
+    }
+
+    private void OnParseCompleted(DS3DXMLStructure structure)
+    {
+        Dispatcher.RunOnMainThread(() =>
+        {
+            GameObject parent = new GameObject("Import");
+            CreateElement(structure.Root, parent.transform);
+        });
     }
 
     private void CreateElement(ProductStructureElement element, Transform parent)
     {
         GameObject tempObject = new GameObject(element.Name);
-        tempObject.transform.SetParent(parent);
 
         if (element.TransformDefinition != null)
         {
             tempObject.transform.position = element.TransformDefinition.Position;
-            tempObject.transform.rotation = element.TransformDefinition.Rotation.rotation;
+            tempObject.transform.rotation = element.TransformDefinition.Rotation;
 
             if (element.TransformDefinition.Vertices != null && element.TransformDefinition.Vertices.Count > 0)
             {
@@ -46,7 +54,9 @@ public class Loader : MonoBehaviour
             tempObject.transform.rotation = Quaternion.identity;
         }
 
-        foreach(ProductStructureElement child in element.Children)
+        tempObject.transform.SetParent(parent);
+
+        foreach (ProductStructureElement child in element.Children)
         {
             CreateElement(child, tempObject.transform);
         }
