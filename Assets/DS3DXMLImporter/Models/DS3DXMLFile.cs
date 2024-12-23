@@ -47,6 +47,7 @@ namespace DS3DXMLImporter.Models
                     var name = entry.Name.ToLower();
                     var fileStream = new MemoryStream();
                     entry.Open().CopyTo(fileStream);
+                    name.Replace(".3Drep", ".xml");
                     dict.Add(name, fileStream);
                 }
             }

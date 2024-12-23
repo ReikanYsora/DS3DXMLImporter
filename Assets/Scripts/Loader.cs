@@ -9,7 +9,8 @@ using UnityEngine.Rendering;
 
 public class Loader : MonoBehaviour
 {
-    private const string PATH_TEST = "C:\\Users\\jcrem\\Desktop\\3DXML\\V6\\XMLtess_prd-ADCO01-02446340_00_A.1_BATTERY_A6_BATTERY_DMU_BASELINE_Not_mature_In Work_BsF_(1).3dxml";
+    //private const string PATH_TEST = "C:\\Users\\jcrem\\Desktop\\3DXML\\V6\\XMLtess_prd-ADCO01-02446340_00_A.1_BATTERY_A6_BATTERY_DMU_BASELINE_Not_mature_In Work_BsF_(1).3dxml";
+    private const string PATH_TEST_V5 = "C:\\Users\\jcrem\\Desktop\\3DXML\\V5\\XMLtess_prd-ADCO01-02446340_00_A.1_BATTERY_A6_BATTERY_DMU_BASELINE_Not_mature_In Work_BsF_v5v2.3dxml";
     public Material VertexColor;
     private Dictionary<string, Mesh> _meshes = new Dictionary<string, Mesh>();
 
@@ -18,7 +19,7 @@ public class Loader : MonoBehaviour
         DS3DXMLParser parser = new DS3DXMLParser();
         parser.OnParseCompleted += OnParseCompleted;
 
-        ILoader loader = LoaderFactory.CreateFileLoader(PATH_TEST);
+        ILoader loader = LoaderFactory.CreateFileLoader(PATH_TEST_V5);
         parser.ParseStructure(loader);
     }
 
