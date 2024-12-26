@@ -106,15 +106,15 @@ namespace DS3XMLImporter.Parsers
 
             foreach (XAttribute attribute in node.Attributes())
             {
-                var (typedValue, type) = ConvertValue(attribute.Value);
-                result.Add(new ElementNodeData(attribute.Name.LocalName, type, typedValue));
+                (IComparable typedValue, ElementValueType type) = ConvertValue(attribute.Value);
+                result.Add(new ElementNodeData(attribute.Name.LocalName, ElementType.Attribute, type, typedValue));
             }
 
             foreach (XElement child in node.Elements())
             {
                 if (child.HasElements)
                 {
-                    ElementNodeData childNode = new ElementNodeData(child.Name.LocalName, ElementValueType.None, null)
+                    ElementNodeData childNode = new ElementNodeData(child.Name.LocalName, ElementType.Element, ElementValueType.None, null)
                     {
                         Children = ParseElements(child)
                     };
@@ -123,8 +123,8 @@ namespace DS3XMLImporter.Parsers
                 }
                 else
                 {
-                    var (typedValue, type) = ConvertValue(child.Value);
-                    result.Add(new ElementNodeData(child.Name.LocalName, type, typedValue));
+                    (IComparable typedValue, ElementValueType type) = ConvertValue(child.Value);
+                    result.Add(new ElementNodeData(child.Name.LocalName, ElementType.Element, type, typedValue));
                 }
             }
 

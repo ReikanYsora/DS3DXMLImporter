@@ -10,8 +10,6 @@ namespace DS3XMLImporter.Models
 
         public string Name { get; set; }
 
-        public string Description { get; set; }
-
         public List<ElementNodeData> ElementsData { get; set; }
         #endregion
 
