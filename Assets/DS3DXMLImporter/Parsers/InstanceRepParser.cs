@@ -8,16 +8,20 @@ namespace DS3DXMLImporter.Parsers
     public class InstanceRepParser
     {
         #region METHODS
-        public static InstanceRep FromXDocument(XElement xElement)
+        public static InstanceRep FromXDocument(XElement instanceRepXElement)
         {
-            int id = int.Parse(xElement.Attribute(XName.Get("id")).Value);
-            string name = xElement.Attribute(XName.Get("name")).Value;
+            int id = int.Parse(instanceRepXElement.Attribute(XName.Get("id")).Value);
+            string name = instanceRepXElement.Attribute(XName.Get("name")).Value;
 
-            return new InstanceRep(id, name)
+            InstanceRep instanceRep = new InstanceRep(id, name)
             {
-                AggregatedBy = ParserHelper.ValueOfDescendant(xElement, "IsAggregatedBy", Convert.ToInt32, 0),
-                InstanceOf = ParserHelper.ValueOfDescendant(xElement, "IsInstanceOf", Convert.ToInt32, 0)
+                AggregatedBy = ParserHelper.ValueOfDescendant(instanceRepXElement, "IsAggregatedBy", Convert.ToInt32, 0),
+                InstanceOf = ParserHelper.ValueOfDescendant(instanceRepXElement, "IsInstanceOf", Convert.ToInt32, 0)
             };
+
+            instanceRep.ElementsData = ParserHelper.ParseElements(instanceRepXElement);
+
+            return instanceRep;
         }
         #endregion
     }

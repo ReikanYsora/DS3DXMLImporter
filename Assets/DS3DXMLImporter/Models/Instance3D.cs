@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using DS3DXMLImporter.Models.Attributes;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace DS3XMLImporter.Models
 {
@@ -13,15 +15,20 @@ namespace DS3XMLImporter.Models
 
         public int InstanceOf { get; set; }
 
-        public Instance3D(int id, string name)
-        {
-            ID = id;
-            Name = name;
-        }
+        public List<ElementNodeData> ElementsData { get; set; }
 
         public Vector3 Position { get; set; }
 
         public Quaternion Rotation { get; set; }
+        #endregion
+
+        #region CONSTRUCTOR
+        public Instance3D(int id, string name)
+        {
+            ID = id;
+            Name = name;
+            ElementsData = new List<ElementNodeData>();
+        }
         #endregion
     }
 }

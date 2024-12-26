@@ -1,6 +1,7 @@
 ﻿using DS3DXMLImporter.Exceptions;
 using DS3DXMLImporter.Loaders;
 using DS3DXMLImporter.Models;
+using DS3DXMLImporter.Models.Attributes;
 using DS3DXMLImporter.Models.Unity;
 using DS3XMLImporter.Models;
 using DS3XMLImporter.Models.Interfaces;
@@ -111,17 +112,17 @@ namespace DS3DXMLImporter.Parsers
 
         private IList<Reference3D> ParseReference3D(XDocument document)
         {
-            return ParserHelper.RootDescendants(document, "Reference3D").Select(Reference3DParser.FromXDocument).ToList();
+            return ParserHelper.RootDescendants(document, "Reference3D").Select(x => Reference3DParser.FromXDocument(x)).ToList();
         }
 
         private IList<Instance3D> ParseInstance3D(XDocument document)
         {
-            return ParserHelper.RootDescendants(document, "Instance3D").Select(Instance3DParser.FromXDocument).ToList();
+            return ParserHelper.RootDescendants(document, "Instance3D").Select(x => Instance3DParser.FromXDocument(x)).ToList();
         }
 
         private IList<InstanceRep> ParseInstanceRep(XDocument document)
         {
-            return ParserHelper.RootDescendants(document, "InstanceRep").Select(InstanceRepParser.FromXDocument).ToList();
+            return ParserHelper.RootDescendants(document, "InstanceRep").Select(x => InstanceRepParser.FromXDocument(x)).ToList();
         }
 
         private IList<ReferenceRep> ParseReferenceRep(XDocument xml, IDS3DXMLArchive archive)

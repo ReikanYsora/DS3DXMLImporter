@@ -1,4 +1,5 @@
 ﻿using DS3DXMLImporter.Models;
+using DS3DXMLImporter.Models.Attributes;
 using DS3XMLImporter.Models;
 using DS3XMLImporter.Models.Interfaces;
 using DS3XMLImporter.Parsers;
@@ -28,11 +29,11 @@ namespace DS3DXMLImporter.Parsers
             return referenceReps;
         }
 
-        private static ReferenceRep ParseReferenceRep(XElement refRep3DXMLElement, IDS3DXMLArchive archive)
+        private static ReferenceRep ParseReferenceRep(XElement referenceRepXElement, IDS3DXMLArchive archive)
         {
             ReferenceRep referenceRep = new ReferenceRep();
 
-            foreach (var attribut in refRep3DXMLElement.Attributes())
+            foreach (var attribut in referenceRepXElement.Attributes())
             {
                 switch (attribut.Name.LocalName.ToLower())
                 {
@@ -62,7 +63,8 @@ namespace DS3DXMLImporter.Parsers
                 }
             }
 
-            referenceRep.TriangleGeometries = GetGeometry(refRep3DXMLElement, referenceRep.AssociatedFile, archive);
+            referenceRep.TriangleGeometries = GetGeometry(referenceRepXElement, referenceRep.AssociatedFile, archive);
+            referenceRep.ElementsData = ParserHelper.ParseElements(referenceRepXElement);
 
             return referenceRep;
         }

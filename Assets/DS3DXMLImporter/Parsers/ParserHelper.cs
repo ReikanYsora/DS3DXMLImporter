@@ -1,7 +1,9 @@
-﻿using DS3XMLImporter.Models;
+﻿using DS3DXMLImporter.Models.Attributes;
+using DS3XMLImporter.Models;
 using DS3XMLImporter.Models.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
 using System.Xml.XPath;
@@ -96,6 +98,73 @@ namespace DS3XMLImporter.Parsers
             }
 
             return defaultValue;
+        }
+
+        public static List<ElementNodeData> ParseElements(XElement node)
+        {
+            List<ElementNodeData> result = new List<ElementNodeData>();
+
+            foreach (XAttribute attribute in node.Attributes())
+            {
+                var (typedValue, type) = ConvertValue(attribute.Value);
+                result.Add(new ElementNodeData(attribute.Name.LocalName, type, typedValue));
+            }
+
+            foreach (XElement child in node.Elements())
+            {
+                if (child.HasElements)
+                {
+                    ElementNodeData childNode = new ElementNodeData(child.Name.LocalName, ElementValueType.None, null)
+                    {
+                        Children = ParseElements(child)
+                    };
+
+                    result.Add(childNode);
+                }
+                else
+                {
+                    var (typedValue, type) = ConvertValue(child.Value);
+                    result.Add(new ElementNodeData(child.Name.LocalName, type, typedValue));
+                }
+            }
+
+            return result;
+        }
+
+        private static (IComparable Value, ElementValueType Type) ConvertValue(string value)
+        {
+            if (long.TryParse(value, out long longValue))
+            {
+                //01/01/1985 to 01/01/2100
+                if (longValue >= 473385600 && longValue <= 4102444800) 
+                {
+                    try
+                    {
+                        DateTime dateTime = DateTimeOffset.FromUnixTimeSeconds(longValue).DateTime;
+                        return (dateTime, ElementValueType.DateTime);
+                    }
+                    catch{}
+                }
+
+                return (longValue, ElementValueType.Integer);
+            }
+
+            if (int.TryParse(value, out int intValue))
+            {
+                return (intValue, ElementValueType.Integer);
+            }
+
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double doubleValue))
+            {
+                return (doubleValue, ElementValueType.Double);
+            }
+
+            if (bool.TryParse(value, out bool boolValue))
+            {
+                return (boolValue, ElementValueType.Boolean);
+            }
+
+            return (value, ElementValueType.String);
         }
         #endregion
     }

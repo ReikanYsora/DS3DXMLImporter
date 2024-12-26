@@ -1,8 +1,8 @@
 using DS3DXMLImporter.Loaders;
+using DS3DXMLImporter.Models.Attributes;
 using DS3DXMLImporter.Models.Unity;
 using DS3DXMLImporter.Parsers;
 using DS3XMLImporter.Models;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -15,15 +15,15 @@ public class Loader : MonoBehaviour
 
     private void Start()
     {
-        DS3DXMLParser parserv5 = new DS3DXMLParser();
-        parserv5.OnParseCompleted += OnParseCompleted;
-
-        ILoader loaderv5 = LoaderFactory.CreateFileLoader(PATH_TEST_V5);
-        parserv5.ParseStructure(loaderv5);
-
+        //DS3DXMLParser parserv5 = new DS3DXMLParser();
+        //parserv5.OnParseCompleted += OnParseCompleted;
 
         DS3DXMLParser parserv6 = new DS3DXMLParser();
         parserv6.OnParseCompleted += OnParseCompleted;
+
+
+        //ILoader loaderv5 = LoaderFactory.CreateFileLoader(PATH_TEST_V5);
+        //parserv5.ParseStructure(loaderv5);
 
         ILoader loaderv6 = LoaderFactory.CreateFileLoader(PATH_TEST_V6);
         parserv6.ParseStructure(loaderv6);
@@ -41,27 +41,17 @@ public class Loader : MonoBehaviour
     private void CreateElement(ProductStructureElement element, Transform parent)
     {
         GameObject tempObject = new GameObject(element.Name);
-
-        if (element.MeshDefinition != null)
-        {
-            tempObject.transform.position = element.Position;
-            tempObject.transform.rotation = element.Rotation;
-
-            if (element.MeshDefinition.Vertices != null && element.MeshDefinition.Vertices.Count > 0)
-            {
-                MeshFilter filter = tempObject.AddComponent<MeshFilter>();
-                MeshRenderer renderer = tempObject.AddComponent<MeshRenderer>();
-                filter.sharedMesh = CreateMesh(element.MeshDefinition);
-                renderer.material = VertexColor;
-            }
-        }
-        else
-        {
-            tempObject.transform.position = Vector3.zero;
-            tempObject.transform.rotation = Quaternion.identity;
-        }
-
         tempObject.transform.SetParent(parent);
+        tempObject.transform.position = element.Position;
+        tempObject.transform.rotation = element.Rotation;
+
+        if (element.MeshDefinition != null && element.MeshDefinition.Vertices != null && element.MeshDefinition.Vertices.Count > 0)
+        {
+            MeshFilter filter = tempObject.AddComponent<MeshFilter>();
+            MeshRenderer renderer = tempObject.AddComponent<MeshRenderer>();
+            filter.sharedMesh = CreateMesh(element.MeshDefinition);
+            renderer.material = VertexColor;
+        }
 
         foreach (ProductStructureElement child in element.Children)
         {

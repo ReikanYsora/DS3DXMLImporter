@@ -1,4 +1,7 @@
-﻿namespace DS3XMLImporter.Models
+﻿using DS3DXMLImporter.Models.Attributes;
+using System.Collections.Generic;
+
+namespace DS3XMLImporter.Models
 {
     public class InstanceRep
     {
@@ -10,6 +13,8 @@
         public int AggregatedBy { get; set; }
 
         public int InstanceOf { get; set; }
+
+        public List<ElementNodeData> ElementsData { get; set; }
         #endregion
 
         #region CONSTRUCTOR
@@ -17,6 +22,7 @@
         {
             ID = id;
             Name = name;
+            ElementsData = new List<ElementNodeData>();
         }
         #endregion
     }
