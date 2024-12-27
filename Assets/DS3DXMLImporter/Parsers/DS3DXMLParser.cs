@@ -1,7 +1,5 @@
-﻿using DS3DXMLImporter.Exceptions;
-using DS3DXMLImporter.Loaders;
+﻿using DS3DXMLImporter.Loaders;
 using DS3DXMLImporter.Models;
-using DS3DXMLImporter.Models.Attributes;
 using DS3DXMLImporter.Models.Unity;
 using DS3XMLImporter.Models;
 using DS3XMLImporter.Models.Interfaces;
@@ -15,18 +13,20 @@ using System.Xml.Linq;
 
 namespace DS3DXMLImporter.Parsers
 {
-    internal class DS3DXMLParser
+    public class DS3DXMLParser
     {
         #region ATTRIBUTES
         private DS3DXMLHeader _header;
-        private IList<ReferenceRep> _referencesRep;
-        private IList<InstanceRep> _instancesRep;
-        private IList<Reference3D> _references3D;
-        private IList<Instance3D> _instances3D;
+        private Dictionary<int, ReferenceRep> _referencesRep;
+        private Dictionary<int, InstanceRep> _instancesRep;
+        private Dictionary<int, Reference3D> _references3D;
+        private Dictionary<int, Instance3D> _instances3D;
         private Dictionary<string, MeshDefinition> _meshDefinitions;
         #endregion
 
         #region EVENTS
+        public delegate void OnParseProgressionChangedEventHandler(float progress);
+        public event OnParseProgressionChangedEventHandler OnParseProgressionChanged;
         public delegate void OnParseCompletedEventHandler(DS3DXMLStructure structure);
         public event OnParseCompletedEventHandler OnParseCompleted;
         #endregion
@@ -37,31 +37,100 @@ namespace DS3DXMLImporter.Parsers
             ParseStructure(loader.Load());
         }
 
+        internal void FireProgression(float progress)
+        {
+            OnParseProgressionChanged?.Invoke(progress);
+        }
+
         public void ParseStructure(Stream stream)
         {
             Task.Factory.StartNew(() =>
             {
                 try
                 {
-                    IDS3DXMLArchive fileArchive = DS3DXMLFile.Create(stream);
-                    XDocument xmlManifest = ReadManifest(fileArchive);
+                    OnParseProgressionChanged?.Invoke(0.0f);
 
+                    IDS3DXMLArchive fileArchive = DS3DXMLFile.Create(stream);
+                    XDocument xmlManifest = ParserHelper.ReadManifest(fileArchive);
+                    OnParseProgressionChanged?.Invoke(0.1f);
+
+                    //Parse "Header"
                     _header = ParserHelper.GetHeader(xmlManifest);
-                    _referencesRep = ParseReferenceRep(xmlManifest, fileArchive);
-                    _instancesRep = ParseInstanceRep(xmlManifest);
-                    _references3D = ParseReference3D(xmlManifest);
-                    _instances3D = ParseInstance3D(xmlManifest);
-                    _meshDefinitions = ConvertToMeshDefinitions(_referencesRep);
+                    OnParseProgressionChanged?.Invoke(0.2f);
+
+                    //Parse "ReferenceRep" nodes
+                    _referencesRep = new Dictionary<int, ReferenceRep>();
+                    IEnumerable<XElement> xmlReferenceReps = xmlManifest.Root.Descendants("{http://www.3ds.com/xsd/3DXML}ReferenceRep");
+
+                    int minProgress = 0;
+                    int maxProgress = xmlReferenceReps.Count();
+
+                    foreach (XElement referenceRep in xmlReferenceReps)
+                    {
+                        ReferenceRep tempReferenceRep = ReferenceRepParser.Parse(referenceRep, fileArchive);
+                        _referencesRep.Add(tempReferenceRep.ID, tempReferenceRep);
+                        minProgress++;
+                        OnParseProgressionChanged?.Invoke((float) Math.Round(0.2f + (minProgress * (0.4f / maxProgress)), 2));
+                    }
+
+                    //Parse "InstanceRep" nodes
+                    _instancesRep = new Dictionary<int, InstanceRep>();
+                    IEnumerable<XElement> xmlInstanceReps = xmlManifest.Root.Descendants("{http://www.3ds.com/xsd/3DXML}InstanceRep");
+
+                    minProgress = 0;
+                    maxProgress = xmlInstanceReps.Count();
+
+                    foreach (XElement instanceRep in xmlInstanceReps)
+                    {
+                        InstanceRep tempInstanceRep = InstanceRepParser.Parse(instanceRep);
+                        _instancesRep.Add(tempInstanceRep.ID, tempInstanceRep);
+                        minProgress++;
+                        OnParseProgressionChanged?.Invoke((float)Math.Round(0.6f + (minProgress * (0.1f / maxProgress)), 2));
+                    }
+
+                    //Parse "Reference3D" nodes
+                    _references3D = new Dictionary<int, Reference3D>();
+                    IEnumerable<XElement> xmlReference3Ds = xmlManifest.Root.Descendants("{http://www.3ds.com/xsd/3DXML}Reference3D");
+
+                    minProgress = 0;
+                    maxProgress = xmlReference3Ds.Count();
+
+                    foreach (XElement reference3D in xmlReference3Ds)
+                    {
+                        Reference3D tempReference3D = Reference3DParser.Parse(reference3D);
+                        _references3D.Add(tempReference3D.ID, tempReference3D);
+                        minProgress++;
+                        OnParseProgressionChanged?.Invoke((float)Math.Round(0.7f + (minProgress * (0.1f / maxProgress)), 2));
+                    }
+
+                    //Parse "Instance3D" nodes
+                    _instances3D = new Dictionary<int, Instance3D>();
+                    IEnumerable<XElement> xmlInstance3Ds = xmlManifest.Root.Descendants("{http://www.3ds.com/xsd/3DXML}Instance3D");
+
+                    minProgress = 0;
+                    maxProgress = xmlInstance3Ds.Count();
+
+                    foreach (XElement instance3D in xmlInstance3Ds)
+                    {
+                        Instance3D tempInstance3D = Instance3DParser.Parse(instance3D);
+                        _instances3D.Add(tempInstance3D.ID, tempInstance3D);
+                        minProgress++;
+                        OnParseProgressionChanged?.Invoke((float)Math.Round(0.8f + (minProgress * (0.1f / maxProgress)), 2));
+                    }
+
+                    //Convert geometry data to Unity mesh definition
+                    _meshDefinitions = ConvertToMeshDefinitions(_referencesRep.Values);
 
                     DS3DXMLStructure structure = new DS3DXMLStructure(
                         _header,
-                        _referencesRep.ToDictionary(x => x.ID, y => y),
-                        _instancesRep.ToDictionary(x => x.ID, y => y),
-                        _references3D.ToDictionary(x => x.ID, y => y),
-                        _instances3D.ToDictionary(x => x.ID, y => y),
+                        _referencesRep,
+                        _instancesRep,
+                        _references3D,
+                        _instances3D,
                         _meshDefinitions
                     );
 
+                    OnParseProgressionChanged?.Invoke(1.0f);
                     OnParseCompleted?.Invoke(structure);
                 }
                 catch (Exception ex)
@@ -69,33 +138,6 @@ namespace DS3DXMLImporter.Parsers
                     UnityEngine.Debug.LogError(ex);
                 }
             });
-        }
-
-        public T Get<T>(int id)
-        {
-            Type type = typeof(T);
-
-            if (type == typeof(Reference3D))
-            {
-                return (T)Convert.ChangeType(_references3D.First(x => x.ID == id), type);
-            }
-
-            if (type == typeof(Instance3D))
-            {
-                return (T)Convert.ChangeType(_instances3D.First(x => x.ID == id), type);
-            }
-
-            if (type == typeof(ReferenceRep))
-            {
-                return (T)Convert.ChangeType(_referencesRep.First(x => x.ID == id), type);
-            }
-
-            if (type == typeof(InstanceRep))
-            {
-                return (T)Convert.ChangeType(_instancesRep.First(x => x.ID == id), type);
-            }
-
-            throw new TypeNotFoundException(type.Name);
         }
 
         private Dictionary<string, MeshDefinition> ConvertToMeshDefinitions(IEnumerable<ReferenceRep> referenceReps)
@@ -108,31 +150,6 @@ namespace DS3DXMLImporter.Parsers
             }
 
             return meshDefinitions;
-        }
-
-        private IList<Reference3D> ParseReference3D(XDocument document)
-        {
-            return ParserHelper.RootDescendants(document, "Reference3D").Select(x => Reference3DParser.FromXDocument(x)).ToList();
-        }
-
-        private IList<Instance3D> ParseInstance3D(XDocument document)
-        {
-            return ParserHelper.RootDescendants(document, "Instance3D").Select(x => Instance3DParser.FromXDocument(x)).ToList();
-        }
-
-        private IList<InstanceRep> ParseInstanceRep(XDocument document)
-        {
-            return ParserHelper.RootDescendants(document, "InstanceRep").Select(x => InstanceRepParser.FromXDocument(x)).ToList();
-        }
-
-        private IList<ReferenceRep> ParseReferenceRep(XDocument xml, IDS3DXMLArchive archive)
-        {
-            return ReferenceRepParser.ParseReferenceReps(xml, archive);
-        }
-
-        private XDocument ReadManifest(IDS3DXMLArchive fileArchive)
-        {
-            return ParserHelper.ReadManifest(fileArchive);
         }
         #endregion
     }

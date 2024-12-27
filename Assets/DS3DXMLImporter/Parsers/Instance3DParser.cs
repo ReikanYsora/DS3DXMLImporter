@@ -12,7 +12,7 @@ namespace DS3DXMLImporter.Parsers
     public class Instance3DParser
     {
         #region METHODS
-        public static Instance3D FromXDocument(XElement instance3DXElement)
+        public static Instance3D Parse(XElement instance3DXElement)
         {
             int id = int.Parse(instance3DXElement.Attribute(XName.Get("id")).Value);
             string name = instance3DXElement.Attribute(XName.Get("name")).Value;
@@ -25,6 +25,7 @@ namespace DS3DXMLImporter.Parsers
             {
                 AggregatedBy = ParserHelper.ValueOfDescendant(instance3DXElement, "IsAggregatedBy", Convert.ToInt32, 0),
                 InstanceOf = ParserHelper.ValueOfDescendant(instance3DXElement, "IsInstanceOf", Convert.ToInt32, 0),
+                RelativeMatrix = relativeMatrix.ToArray(),
                 Position = position,
                 Rotation = rotation
             };
@@ -41,6 +42,7 @@ namespace DS3DXMLImporter.Parsers
 
             return list;
         }
+
         private static void ConvertMatrix(double[] matrix, out Vector3 position, out Quaternion rotation)
         {
             float m11 = (float)matrix[0];

@@ -6,20 +6,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
-using System.Xml.XPath;
 
 namespace DS3XMLImporter.Parsers
 {
     internal class ParserHelper
     {
         #region METHODS
-        public static string GetName(XDocument data)
-        {
-            XElement titleNode = data.XPathSelectElement("Model_3dxml");
-
-            return titleNode.Value;
-        }
-
         public static DS3DXMLHeader GetHeader(XDocument xmlDocument)
         {
             DS3DXMLHeader header = new DS3DXMLHeader();
@@ -81,11 +73,6 @@ namespace DS3XMLImporter.Parsers
         public static string CleanUpFileName(string filename)
         {
             return filename.Split(":".ToCharArray()).Last();
-        }
-
-        public static IEnumerable<XElement> RootDescendants(XDocument document, string name)
-        {
-            return document.Root.Descendants("{http://www.3ds.com/xsd/3DXML}" + name);
         }
 
         public static T ValueOfDescendant<T>(XElement xElement, string name, Func<string, T> mapping, T defaultValue)

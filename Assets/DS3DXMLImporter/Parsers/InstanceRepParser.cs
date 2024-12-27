@@ -8,7 +8,7 @@ namespace DS3DXMLImporter.Parsers
     public class InstanceRepParser
     {
         #region METHODS
-        public static InstanceRep FromXDocument(XElement instanceRepXElement)
+        public static InstanceRep Parse(XElement instanceRepXElement)
         {
             int id = int.Parse(instanceRepXElement.Attribute(XName.Get("id")).Value);
             string name = instanceRepXElement.Attribute(XName.Get("name")).Value;

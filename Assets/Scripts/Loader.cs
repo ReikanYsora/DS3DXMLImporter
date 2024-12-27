@@ -12,6 +12,7 @@ public class Loader : MonoBehaviour
     private const string PATH_TEST_V6 = "C:\\Users\\jcrem\\Desktop\\3DXML\\V6\\XMLtess_prd-ADCO01-02446340_00_A.1_BATTERY_A6_BATTERY_DMU_BASELINE_Not_mature_In Work_BsF_(1).3dxml";
     private const string PATH_TEST_V5 = "C:\\Users\\jcrem\\Desktop\\3DXML\\V5\\XMLtess_prd-ADCO01-02446340_00_A.1_BATTERY_A6_BATTERY_DMU_BASELINE_Not_mature_In Work_BsF_v5v2.3dxml";
     public Material VertexColor;
+    public GameObject Prefab;
 
     private void Start()
     {
@@ -20,6 +21,7 @@ public class Loader : MonoBehaviour
 
         DS3DXMLParser parserv6 = new DS3DXMLParser();
         parserv6.OnParseCompleted += OnParseCompleted;
+        parserv6.OnParseProgressionChanged += OnParseProgressionChanged;
 
 
         //ILoader loaderv5 = LoaderFactory.CreateFileLoader(PATH_TEST_V5);
@@ -27,6 +29,11 @@ public class Loader : MonoBehaviour
 
         ILoader loaderv6 = LoaderFactory.CreateFileLoader(PATH_TEST_V6);
         parserv6.ParseStructure(loaderv6);
+    }
+
+    private void OnParseProgressionChanged(float progress)
+    {
+        Debug.Log(progress);
     }
 
     private void OnParseCompleted(DS3DXMLStructure structure)
@@ -40,10 +47,8 @@ public class Loader : MonoBehaviour
 
     private void CreateElement(ProductStructureElement element, Transform parent)
     {
-        GameObject tempObject = new GameObject(element.Name);
-        tempObject.transform.SetParent(parent);
-        tempObject.transform.position = element.Position;
-        tempObject.transform.rotation = element.Rotation;
+        GameObject tempObject = GameObject.Instantiate(Prefab, element.Position, element.Rotation, parent);
+        tempObject.name = element.Name;
 
         if (element.MeshDefinition != null && element.MeshDefinition.Vertices != null && element.MeshDefinition.Vertices.Count > 0)
         {
@@ -67,6 +72,7 @@ public class Loader : MonoBehaviour
         mesh.normals = element.Normals.ToArray();
         mesh.colors = element.Colors.ToArray();
         mesh.triangles = element.Triangles.ToArray();
+        mesh.RecalculateBounds();
 
         return mesh;
     }

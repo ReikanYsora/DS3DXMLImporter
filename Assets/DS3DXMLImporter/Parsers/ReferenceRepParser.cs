@@ -1,5 +1,4 @@
 ﻿using DS3DXMLImporter.Models;
-using DS3DXMLImporter.Models.Attributes;
 using DS3XMLImporter.Models;
 using DS3XMLImporter.Models.Interfaces;
 using DS3XMLImporter.Parsers;
@@ -16,20 +15,7 @@ namespace DS3DXMLImporter.Parsers
     public class ReferenceRepParser
     {
         #region METHODS
-        public static IList<ReferenceRep> ParseReferenceReps(XDocument xml, IDS3DXMLArchive archive)
-        {
-            IList<ReferenceRep> referenceReps = new List<ReferenceRep>();
-            IEnumerable<XElement> xmlReferenceReps = xml.Root.Descendants("{http://www.3ds.com/xsd/3DXML}ReferenceRep");
-
-            foreach (XElement rep in xmlReferenceReps)
-            {
-                referenceReps.Add(ParseReferenceRep(rep, archive));
-            }
-
-            return referenceReps;
-        }
-
-        private static ReferenceRep ParseReferenceRep(XElement referenceRepXElement, IDS3DXMLArchive archive)
+        internal static ReferenceRep Parse(XElement referenceRepXElement, IDS3DXMLArchive archive)
         {
             ReferenceRep referenceRep = new ReferenceRep();
 
@@ -69,18 +55,18 @@ namespace DS3DXMLImporter.Parsers
             return referenceRep;
         }
 
-        private static IList<TriangleGeometry> GetGeometry(XElement threeDReferenceRepXmlElement, string nameOfExternalRepFileDescription, IDS3DXMLArchive archive)
+        private static IList<TriangleGeometry> GetGeometry(XElement referenceRepGeometry, string externalFileName, IDS3DXMLArchive archive)
         {
             XDocument xmlReferenceRep;
             IList<TriangleGeometry> triangles = new List<TriangleGeometry>();
 
-            if (nameOfExternalRepFileDescription != null && nameOfExternalRepFileDescription.Any())
+            if (externalFileName != null && externalFileName.Any())
             {
-                xmlReferenceRep = archive.GetNextDocument(ParserHelper.CleanUpFileName(nameOfExternalRepFileDescription));
+                xmlReferenceRep = archive.GetNextDocument(ParserHelper.CleanUpFileName(externalFileName));
             }
             else
             {
-                xmlReferenceRep = threeDReferenceRepXmlElement.Document;
+                xmlReferenceRep = referenceRepGeometry.Document;
             }
 
             IList<XElement> bagReps = GetBagRepXmlElements(xmlReferenceRep);
