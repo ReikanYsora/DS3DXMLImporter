@@ -14,19 +14,19 @@ public class Loader : MonoBehaviour
 
     private void Start()
     {
-        DS3DXMLParser parserv5 = new DS3DXMLParser();
-        parserv5.OnParseCompleted += OnParseCompleted;
+        //DS3DXMLParser parserv5 = new DS3DXMLParser();
+        //parserv5.OnParseCompleted += OnParseCompleted;
 
         DS3DXMLParser parserv6 = new DS3DXMLParser();
         parserv6.OnParseCompleted += OnParseCompleted;
         parserv6.OnParseProgressionChanged += OnParseProgressionChanged;
 
 
-        ILoader loaderv5 = LoaderFactory.CreateFileLoader(PATH_TEST_V5);
-        parserv5.ParseStructure(loaderv5);
+        //ILoader loaderv5 = LoaderFactory.CreateFileLoader(PATH_TEST_V5);
+        //parserv5.ParseStructure(loaderv5);
 
         ILoader loaderv6 = LoaderFactory.CreateFileLoader(PATH_TEST_V6);
-        parserv6.ParseStructure(loaderv6);
+        parserv6.ParseStructure(loaderv6, 1f);
     }
 
     private void OnParseProgressionChanged(float progress)

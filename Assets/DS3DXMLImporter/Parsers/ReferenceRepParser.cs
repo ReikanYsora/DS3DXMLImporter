@@ -132,7 +132,7 @@ namespace DS3DXMLImporter.Parsers
                 Color c2 = color;
                 Color c3 = color;
 
-                triangles.Add(new TriangleGeometry(x, y, z, nx, ny, nz, c1, c3, c2));
+                triangles.Add(new TriangleGeometry(x, y, z, nx, ny, nz, c1, c2, c3));
             }
 
             return triangles;
