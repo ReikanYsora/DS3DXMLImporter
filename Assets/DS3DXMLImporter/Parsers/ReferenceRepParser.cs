@@ -15,7 +15,7 @@ namespace DS3DXMLImporter.Parsers
     public class ReferenceRepParser
     {
         #region METHODS
-        internal static ReferenceRep Parse(XElement referenceRepXElement, IDS3DXMLArchive archive)
+        internal static ReferenceRep Parse(XElement referenceRepXElement, IDS3DXMLArchive archive, float scale)
         {
             ReferenceRep referenceRep = new ReferenceRep();
 
@@ -49,13 +49,13 @@ namespace DS3DXMLImporter.Parsers
                 }
             }
 
-            referenceRep.TriangleGeometries = GetGeometry(referenceRepXElement, referenceRep.AssociatedFile, archive);
+            referenceRep.TriangleGeometries = GetGeometry(referenceRepXElement, referenceRep.AssociatedFile, archive, scale);
             referenceRep.ElementsData = ParserHelper.ParseElements(referenceRepXElement);
 
             return referenceRep;
         }
 
-        private static IList<TriangleGeometry> GetGeometry(XElement referenceRepGeometry, string externalFileName, IDS3DXMLArchive archive)
+        private static IList<TriangleGeometry> GetGeometry(XElement referenceRepGeometry, string externalFileName, IDS3DXMLArchive archive, float scale)
         {
             XDocument xmlReferenceRep;
             IList<TriangleGeometry> triangles = new List<TriangleGeometry>();
@@ -76,8 +76,8 @@ namespace DS3DXMLImporter.Parsers
                 foreach (var bagRep in bagReps)
                 {
                     IList<XElement> faces = bagRep.Descendants("{http://www.3ds.com/xsd/3DXML}Faces").Where(x => x.Parent.Name.LocalName.ToLower() != "polygonallod").ToList();
-                    IList<Vector3> verticies = GetVerticesFromXml(bagRep);
-                    IList<Vector3> normals = GetNormalsFromXml(bagRep);
+                    IList<Vector3> verticies = GetVerticesFromXml(bagRep, scale);
+                    IList<Vector3> normals = GetNormalsFromXml(bagRep, scale);
 
                     foreach (var face in faces.Elements("{http://www.3ds.com/xsd/3DXML}Face"))
                     {
@@ -102,7 +102,7 @@ namespace DS3DXMLImporter.Parsers
             }
 
             XElement surfaceAttributes = face.Element("{http://www.3ds.com/xsd/3DXML}SurfaceAttributes");
-            Vector4 color = new Vector4(0f, 0f, 0f, 0f);
+            Color color = new Color(0f, 0f, 0f, 0f);
 
             if (surfaceAttributes != null)
             {
@@ -114,7 +114,7 @@ namespace DS3DXMLImporter.Parsers
                     float green = float.Parse(colorElement.Attribute("green").Value, CultureInfo.InvariantCulture);
                     float blue = float.Parse(colorElement.Attribute("blue").Value, CultureInfo.InvariantCulture);
                     float alpha = float.Parse(colorElement.Attribute("alpha").Value, CultureInfo.InvariantCulture);
-                    color = new Vector4(red, green, blue, alpha);
+                    color = new Color(red, green, blue, alpha);
                 }
             }
 
@@ -132,7 +132,7 @@ namespace DS3DXMLImporter.Parsers
                 Color c2 = color;
                 Color c3 = color;
 
-                triangles.Add(new TriangleGeometry(x, y, z, nx, ny, nz, c1, c2, c3));
+                triangles.Add(new TriangleGeometry(x, y, z, nx, ny, nz, c1, c3, c2));
             }
 
             return triangles;
@@ -187,7 +187,7 @@ namespace DS3DXMLImporter.Parsers
             }
 
             XElement surfaceAttributes = face.Element("{http://www.3ds.com/xsd/3DXML}SurfaceAttributes");
-            Vector4 color = new Vector4(0f, 0f, 0f, 0f);
+            Color color = new Color(0f, 0f, 0f, 0f);
 
             if (surfaceAttributes != null)
             {
@@ -199,11 +199,11 @@ namespace DS3DXMLImporter.Parsers
                     float green = float.Parse(colorElement.Attribute("green").Value, CultureInfo.InvariantCulture);
                     float blue = float.Parse(colorElement.Attribute("blue").Value, CultureInfo.InvariantCulture);
                     float alpha = float.Parse(colorElement.Attribute("alpha").Value, CultureInfo.InvariantCulture);
-                    color = new Vector4(red, green, blue, alpha);
+                    color = new Color(red, green, blue, alpha);
                 }
             }
 
-            IList<Vector4> colors = new List<Vector4>();
+            IList<Color> colors = new List<Color>();
 
             for (int i = 0; i < verticies.Count; i++)
             {
@@ -229,7 +229,7 @@ namespace DS3DXMLImporter.Parsers
             return list;
         }
 
-        private static IList<TriangleGeometry> StripToTriangles(IList<int> indices, IList<Vector3> verticies, IList<Vector3> normals, IList<Vector4> colors)
+        private static IList<TriangleGeometry> StripToTriangles(IList<int> indices, IList<Vector3> verticies, IList<Vector3> normals, IList<Color> colors)
         {
             List<TriangleGeometry> list = new List<TriangleGeometry>();
             bool op = true;
@@ -267,7 +267,7 @@ namespace DS3DXMLImporter.Parsers
             return arg.Descendants("{http://www.3ds.com/xsd/3DXML}Faces").Any(x => x.Parent.Name.LocalName != "PolygonalLOD");
         }
 
-        private static IList<Vector3> GetVerticesFromXml(XElement bagRep)
+        private static IList<Vector3> GetVerticesFromXml(XElement bagRep, float scale)
         {
             IEnumerable<XElement> vertexPositionsXml = bagRep.Descendants("{http://www.3ds.com/xsd/3DXML}Positions").Where(x => x.Parent.Name.LocalName == "VertexBuffer");
 
@@ -299,7 +299,7 @@ namespace DS3DXMLImporter.Parsers
                 y = float.Parse(coordinateAry[1], CultureInfo.InvariantCulture);
                 z = float.Parse(coordinateAry[2], CultureInfo.InvariantCulture);
 
-                vertices.Add(new Vector3(x, y, z));
+                vertices.Add(new Vector3(x, z, y) / scale);
             }
 
             if (vertices.Count == 0)
@@ -310,7 +310,7 @@ namespace DS3DXMLImporter.Parsers
             return vertices;
         }
 
-        private static IList<Vector3> GetNormalsFromXml(XElement bagRep)
+        private static IList<Vector3> GetNormalsFromXml(XElement bagRep, float scale)
         {
             IEnumerable<XElement> normalPositionsXml = bagRep.Descendants("{http://www.3ds.com/xsd/3DXML}Normals").Where(x => x.Parent.Name.LocalName == "VertexBuffer");
 
@@ -342,7 +342,7 @@ namespace DS3DXMLImporter.Parsers
                 y = float.Parse(coordinateAry[1], CultureInfo.InvariantCulture);
                 z = float.Parse(coordinateAry[2], CultureInfo.InvariantCulture);
 
-                normals.Add(new Vector3(x, y, z));
+                normals.Add(new Vector3(x, z, y) / scale);
             }
 
             if (normals.Count == 0)

@@ -1,6 +1,5 @@
 ﻿using DS3DXMLImporter.Loaders;
 using DS3DXMLImporter.Models;
-using DS3DXMLImporter.Models.Unity;
 using DS3XMLImporter.Models;
 using DS3XMLImporter.Models.Interfaces;
 using DS3XMLImporter.Parsers;
@@ -32,17 +31,12 @@ namespace DS3DXMLImporter.Parsers
         #endregion
 
         #region METHODS
-        public void ParseStructure(ILoader loader)
+        public void ParseStructure(ILoader loader, float scale = 1000f)
         {
-            ParseStructure(loader.Load());
+            ParseStructure(loader.Load(), scale);
         }
 
-        internal void FireProgression(float progress)
-        {
-            OnParseProgressionChanged?.Invoke(progress);
-        }
-
-        public void ParseStructure(Stream stream)
+        public void ParseStructure(Stream stream, float scale)
         {
             Task.Factory.StartNew(() =>
             {
@@ -67,7 +61,7 @@ namespace DS3DXMLImporter.Parsers
 
                     foreach (XElement referenceRep in xmlReferenceReps)
                     {
-                        ReferenceRep tempReferenceRep = ReferenceRepParser.Parse(referenceRep, fileArchive);
+                        ReferenceRep tempReferenceRep = ReferenceRepParser.Parse(referenceRep, fileArchive, scale);
                         _referencesRep.Add(tempReferenceRep.ID, tempReferenceRep);
                         minProgress++;
                         OnParseProgressionChanged?.Invoke((float) Math.Round(0.2f + (minProgress * (0.4f / maxProgress)), 2));
@@ -112,7 +106,7 @@ namespace DS3DXMLImporter.Parsers
 
                     foreach (XElement instance3D in xmlInstance3Ds)
                     {
-                        Instance3D tempInstance3D = Instance3DParser.Parse(instance3D);
+                        Instance3D tempInstance3D = Instance3DParser.Parse(instance3D, scale);
                         _instances3D.Add(tempInstance3D.ID, tempInstance3D);
                         minProgress++;
                         OnParseProgressionChanged?.Invoke((float)Math.Round(0.8f + (minProgress * (0.1f / maxProgress)), 2));

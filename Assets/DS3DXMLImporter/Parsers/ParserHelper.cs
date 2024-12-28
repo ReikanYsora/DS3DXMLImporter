@@ -75,6 +75,12 @@ namespace DS3XMLImporter.Parsers
             return filename.Split(":".ToCharArray()).Last();
         }
 
+        public static IList<float> ParseFloatList(string s)
+        {
+            string[] elements = s.Split();
+            return elements.Select(x => (float)Convert.ToDouble(x, CultureInfo.InvariantCulture)).ToList();
+        }
+
         public static T ValueOfDescendant<T>(XElement xElement, string name, Func<string, T> mapping, T defaultValue)
         {
             XElement element = xElement.Descendants().FirstOrDefault(x => x.Name.LocalName == name);

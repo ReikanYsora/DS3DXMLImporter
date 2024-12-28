@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace DS3DXMLImporter.Models.Unity
+namespace DS3DXMLImporter.Models
 {
     public class MeshDefinition
     {

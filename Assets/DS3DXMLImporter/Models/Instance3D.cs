@@ -20,8 +20,6 @@ namespace DS3XMLImporter.Models
         public Vector3 Position { get; set; }
 
         public Quaternion Rotation { get; set; }
-
-        public double[] RelativeMatrix { get; set; }
         #endregion
 
         #region CONSTRUCTOR

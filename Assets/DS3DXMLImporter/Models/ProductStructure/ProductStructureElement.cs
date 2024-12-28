@@ -1,6 +1,7 @@
-using DS3DXMLImporter.Models.Unity;
+using DS3DXMLImporter.Models;
 using System.Collections.Generic;
 using UnityEngine;
+
 public class ProductStructureElement
 {
     #region PROPERTIES

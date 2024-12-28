@@ -1,10 +1,7 @@
-﻿using DS3DXMLImporter.Models.Unity;
+﻿using DS3DXMLImporter.Models;
 using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Linq;
 using UnityEngine;
-using UnityEngine.UIElements;
-using static Unity.VisualScripting.Metadata;
 
 namespace DS3XMLImporter.Models
 {
