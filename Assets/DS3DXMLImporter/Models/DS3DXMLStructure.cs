@@ -21,16 +21,19 @@ namespace DS3XMLImporter.Models
         public Dictionary<int, Reference3D> References3D { get; private set; }
 
         public Dictionary<int, Instance3D> Instances3D { get; private set; }
+
+        public Dictionary<int, CATMatConnection> CATMatConnections { get; private set; }
         #endregion
 
         #region CONSTRUCTOR
-        public DS3DXMLStructure(DS3DXMLHeader header, Dictionary<int, ReferenceRep> referencesRep, Dictionary<int, InstanceRep> instancesRep, Dictionary<int, Reference3D> references3D, Dictionary<int, Instance3D> instances3D, Dictionary<string, MeshDefinition> meshDefinitions)
+        public DS3DXMLStructure(DS3DXMLHeader header, Dictionary<int, ReferenceRep> referencesRep, Dictionary<int, InstanceRep> instancesRep, Dictionary<int, Reference3D> references3D, Dictionary<int, Instance3D> instances3D, Dictionary<int, CATMatConnection> catMatConnections, Dictionary<string, MeshDefinition> meshDefinitions)
         {
             Header = header;    
             ReferencesRep = referencesRep;
             InstancesRep = instancesRep;
             References3D = references3D;
             Instances3D = instances3D;
+            CATMatConnections = catMatConnections;
             MeshDefinitions = meshDefinitions;
 
             Reference3D ref3DTopParent = References3D.Values.OrderBy(x => x.ID).FirstOrDefault();

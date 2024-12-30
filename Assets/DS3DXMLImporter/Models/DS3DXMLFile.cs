@@ -1,4 +1,5 @@
-﻿using DS3XMLImporter.Models.Interfaces;
+﻿using DS3XMLImporter.Models;
+using DS3XMLImporter.Models.Interfaces;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -12,6 +13,8 @@ namespace DS3DXMLImporter.Models
     {
         #region CONSTANTS
         private const string MANIFEST_FILENAME = "Manifest.xml";
+        private const string MATERIAL_FILENAME_V5 = "CATMaterialRef.3dxml";
+        private const string MATERIAL_FILENAME_V6 = "CATMaterialDisciplines.3dxml";
         #endregion
 
         #region ATTRIBUTES
@@ -61,6 +64,20 @@ namespace DS3DXMLImporter.Models
         public XDocument GetManifest()
         {
             return GetNextDocument(MANIFEST_FILENAME);
+        }
+
+        public XDocument GetCATMaterials(DS3DXMLHeader header)
+        {
+            switch (header.Version)
+            {
+                default:
+                case DS3DXMLVersion.Unknown:
+                    return null;
+                case DS3DXMLVersion.V5:
+                    return GetNextDocument(MATERIAL_FILENAME_V5);
+                case DS3DXMLVersion.V6:
+                    return GetNextDocument(MATERIAL_FILENAME_V6);
+            }
         }
 
         public XDocument GetNextDocument(string name)

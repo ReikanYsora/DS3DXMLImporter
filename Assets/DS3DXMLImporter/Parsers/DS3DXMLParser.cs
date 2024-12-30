@@ -16,6 +16,7 @@ namespace DS3DXMLImporter.Parsers
     {
         #region ATTRIBUTES
         private DS3DXMLHeader _header;
+        private Dictionary<int, CATMatConnection> _catMatConnections;
         private Dictionary<int, ReferenceRep> _referencesRep;
         private Dictionary<int, InstanceRep> _instancesRep;
         private Dictionary<int, Reference3D> _references3D;
@@ -52,12 +53,30 @@ namespace DS3DXMLImporter.Parsers
                     _header = ParserHelper.GetHeader(xmlManifest);
                     OnParseProgressionChanged?.Invoke(0.2f);
 
+                    XDocument catMaterialManifest = fileArchive.GetCATMaterials(_header);
+                    xmlManifest.Root.Descendants("{http://www.3ds.com/xsd/3DXML}CATMatConnection");
+
+                    //Parse CADMaterials
+                    _catMatConnections = new Dictionary<int, CATMatConnection>();
+                    IEnumerable<XElement> xmlCATMatConnections = xmlManifest.Root.Descendants("{http://www.3ds.com/xsd/3DXML}CATMatConnection");
+
+                    int minProgress = 0;
+                    int maxProgress = xmlCATMatConnections.Count();
+
+                    foreach (XElement xmlCATMatConnection in xmlCATMatConnections)
+                    {
+                        CATMatConnection tempReferenceRep = CATMatConnectionParser.Parse(xmlCATMatConnection, fileArchive, scale);
+                        _catMatConnections.Add(tempReferenceRep.ID, tempReferenceRep);
+                        minProgress++;
+                        OnParseProgressionChanged?.Invoke((float)Math.Round(minProgress * (0.2f / maxProgress), 2));
+                    }
+
                     //Parse "ReferenceRep" nodes
                     _referencesRep = new Dictionary<int, ReferenceRep>();
                     IEnumerable<XElement> xmlReferenceReps = xmlManifest.Root.Descendants("{http://www.3ds.com/xsd/3DXML}ReferenceRep");
 
-                    int minProgress = 0;
-                    int maxProgress = xmlReferenceReps.Count();
+                    minProgress = 0;
+                    maxProgress = xmlReferenceReps.Count();
 
                     foreach (XElement referenceRep in xmlReferenceReps)
                     {
@@ -121,6 +140,7 @@ namespace DS3DXMLImporter.Parsers
                         _instancesRep,
                         _references3D,
                         _instances3D,
+                        _catMatConnections,
                         _meshDefinitions
                     );
 
