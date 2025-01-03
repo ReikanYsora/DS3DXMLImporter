@@ -58,7 +58,8 @@ Welcome to **DS3DXMLImporter**! This project provides a robust solution for impo
 
 After adding the importer package, you can begin parsing and loading 3DXML files into Unity with the **DS3DXMLParser**.
 
-```using DS3DXMLImporter;
+```
+using DS3DXMLImporter;
 
 public class ExampleUsage : MonoBehaviour
 {
@@ -84,7 +85,8 @@ public class ExampleUsage : MonoBehaviour
     {
         Debug.Log("3DXML parsing completed successfully!");
     }
-}```
+}
+```
 
 ---
 
