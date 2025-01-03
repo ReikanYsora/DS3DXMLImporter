@@ -66,20 +66,6 @@ namespace DS3DXMLImporter.Models
             return GetNextDocument(MANIFEST_FILENAME);
         }
 
-        public XDocument GetCATMaterials(DS3DXMLHeader header)
-        {
-            switch (header.Version)
-            {
-                default:
-                case DS3DXMLVersion.Unknown:
-                    return null;
-                case DS3DXMLVersion.V5:
-                    return GetNextDocument(MATERIAL_FILENAME_V5);
-                case DS3DXMLVersion.V6:
-                    return GetNextDocument(MATERIAL_FILENAME_V6);
-            }
-        }
-
         public XDocument GetNextDocument(string name)
         {
             name = name.ToLower();

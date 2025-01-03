@@ -40,20 +40,6 @@ namespace DS3XMLImporter.Parsers
                         break;
                     case "generator":
                         header.Generator = elem.Value;
-
-                        if (elem.Value.ToLower() == "dassault systemes v6")
-                        {
-                            header.Version = DS3DXMLVersion.V6;
-                        }
-                        else if (elem.Value.ToLower() == "catia v5")
-                        {
-                            header.Version = DS3DXMLVersion.V5;
-                        }
-                        else
-                        {
-                            header.Version = DS3DXMLVersion.Unknown;
-                        }
-
                         break;
                     case "created":
                         try

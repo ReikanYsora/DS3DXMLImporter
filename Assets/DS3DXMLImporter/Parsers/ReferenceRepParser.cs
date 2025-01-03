@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -57,43 +58,46 @@ namespace DS3DXMLImporter.Parsers
 
         private static IList<TriangleGeometry> GetGeometry(XElement referenceRepGeometry, string externalFileName, IDS3DXMLArchive archive, float scale)
         {
-            XDocument xmlReferenceRep;
-            IList<TriangleGeometry> triangles = new List<TriangleGeometry>();
-
-            if (externalFileName != null && externalFileName.Any())
-            {
-                xmlReferenceRep = archive.GetNextDocument(ParserHelper.CleanUpFileName(externalFileName));
-            }
-            else
-            {
-                xmlReferenceRep = referenceRepGeometry.Document;
-            }
-
+            XDocument xmlReferenceRep = externalFileName?.Any() == true ? archive.GetNextDocument(ParserHelper.CleanUpFileName(externalFileName)) : referenceRepGeometry.Document;
             IList<XElement> bagReps = GetBagRepXmlElements(xmlReferenceRep);
 
-            if (bagReps != null)
+            if (bagReps == null || !bagReps.Any())
             {
-                foreach (var bagRep in bagReps)
-                {
-                    IList<XElement> faces = bagRep.Descendants("{http://www.3ds.com/xsd/3DXML}Faces").Where(x => x.Parent.Name.LocalName.ToLower() != "polygonallod").ToList();
-                    IList<Vector3> verticies = GetVerticesFromXml(bagRep, scale);
-                    IList<Vector3> normals = GetNormalsFromXml(bagRep, scale);
+                return Array.Empty<TriangleGeometry>();
+            }
 
-                    foreach (var face in faces.Elements("{http://www.3ds.com/xsd/3DXML}Face"))
-                    {
-                        triangles = triangles.Concat(GetTriangles(face, verticies, normals)).ToList();
-                        triangles = triangles.Concat(GetFans(face, verticies, normals)).ToList();
-                        triangles = triangles.Concat(GetStrips(face, verticies, normals)).ToList();
-                    }
+            List<TriangleGeometry> triangles = new List<TriangleGeometry>();
+
+            foreach (var bagRep in bagReps)
+            {
+                IList<Vector3> vertices = GetVerticesFromXml(bagRep, scale);
+                IList<Vector3> normals = GetNormalsFromXml(bagRep, scale);
+
+                IEnumerable<XElement> faces = bagRep
+                    .Descendants("{http://www.3ds.com/xsd/3DXML}Faces")
+                    .Where(x => x.Parent.Name.LocalName.ToLowerInvariant() != "polygonallod")
+                    .SelectMany(faceGroup => faceGroup.Elements("{http://www.3ds.com/xsd/3DXML}Face"));
+
+                foreach (var face in faces)
+                {
+                    AddTriangles(triangles, face, vertices, normals);
                 }
             }
 
             return triangles;
         }
 
-        private static IList<TriangleGeometry> GetTriangles(XElement face, IList<Vector3> verticies, IList<Vector3> normals)
+        private static void AddTriangles(List<TriangleGeometry> triangles, XElement face, IList<Vector3> vertices, IList<Vector3> normals)
         {
-            IList<TriangleGeometry> triangles = new List<TriangleGeometry>();
+            triangles.AddRange(GetTriangles(face, vertices, normals));
+            triangles.AddRange(GetFans(face, vertices, normals));
+            triangles.AddRange(GetStrips(face, vertices, normals));
+        }
+
+        private static IList<TriangleGeometry> GetTriangles(XElement face, IList<Vector3> vertices, IList<Vector3> normals)
+        {
+            List<TriangleGeometry> triangles = new List<TriangleGeometry>();
+
             XAttribute triangleAttribute = face.Attribute("triangles");
 
             if (triangleAttribute == null)
@@ -101,44 +105,41 @@ namespace DS3DXMLImporter.Parsers
                 return triangles;
             }
 
-            XElement surfaceAttributes = face.Element("{http://www.3ds.com/xsd/3DXML}SurfaceAttributes");
-            Color color = new Color(0f, 0f, 0f, 0f);
+            Color color = ExtractColor(face);
 
-            if (surfaceAttributes != null)
+            string[] faceStringAry = triangleAttribute.Value.Trim().Split(' ');
+
+            if (faceStringAry.Length % 3 != 0)
             {
-                XElement colorElement = surfaceAttributes.Element("{http://www.3ds.com/xsd/3DXML}Color");
+                throw new FormatException("Invalid triangle indices data.");
+            }
 
-                if (color != null)
+            int triangleCount = faceStringAry.Length / 3;
+
+            triangles = new List<TriangleGeometry>(triangleCount);
+
+            Parallel.For(0, triangleCount, i =>
+            {
+                int index1 = int.Parse(faceStringAry[i * 3]);
+                int index2 = int.Parse(faceStringAry[i * 3 + 1]);
+                int index3 = int.Parse(faceStringAry[i * 3 + 2]);
+
+                TriangleGeometry triangle = new TriangleGeometry(
+                    vertices[index2], vertices[index1], vertices[index3],
+                    normals[index2], normals[index1], normals[index3],
+                    color, color, color
+                );
+
+                lock (triangles)
                 {
-                    float red = float.Parse(colorElement.Attribute("red").Value, CultureInfo.InvariantCulture);
-                    float green = float.Parse(colorElement.Attribute("green").Value, CultureInfo.InvariantCulture);
-                    float blue = float.Parse(colorElement.Attribute("blue").Value, CultureInfo.InvariantCulture);
-                    float alpha = float.Parse(colorElement.Attribute("alpha").Value, CultureInfo.InvariantCulture);
-                    color = new Color(red, green, blue, alpha);
+                    triangles.Add(triangle);
                 }
-            }
-
-            var faceStringAry = face.Attribute("triangles").Value.Trim().Split(' ').ToArray();
-
-            for (int i = 0; i < faceStringAry.Length; i += 3)
-            {
-                Vector3 x = verticies[int.Parse(faceStringAry[i + 1])];
-                Vector3 y = verticies[int.Parse(faceStringAry[i])];
-                Vector3 z = verticies[int.Parse(faceStringAry[i + 2])];
-                Vector3 nx = normals[int.Parse(faceStringAry[i + 1])];
-                Vector3 ny = normals[int.Parse(faceStringAry[i])];
-                Vector3 nz = normals[int.Parse(faceStringAry[i + 2])];
-                Color c1 = color;
-                Color c2 = color;
-                Color c3 = color;
-
-                triangles.Add(new TriangleGeometry(x, y, z, nx, ny, nz, c1, c2, c3));
-            }
+            });
 
             return triangles;
         }
 
-        private static IList<TriangleGeometry> GetFans(XElement face, IList<Vector3> verticies, IList<Vector3> normals)
+        private static IList<TriangleGeometry> GetFans(XElement face, IList<Vector3> vertices, IList<Vector3> normals)
         {
             XAttribute fansAttribute = face.Attribute("fans");
 
@@ -147,37 +148,51 @@ namespace DS3DXMLImporter.Parsers
                 return new List<TriangleGeometry>();
             }
 
-            XElement surfaceAttributes = face.Element("{http://www.3ds.com/xsd/3DXML}SurfaceAttributes");
-            Color color = new Color(0f, 0f, 0f, 0f);
+            Color color = ExtractColor(face);
 
-            if (surfaceAttributes != null)
-            {
-                XElement colorElement = surfaceAttributes.Element("{http://www.3ds.com/xsd/3DXML}Color");
+            string[] fansArray = fansAttribute.Value.Trim().Split(',');
+            List<TriangleGeometry> triangles = new List<TriangleGeometry>();
 
-                if (color != null)
+            triangles = fansArray.AsParallel()
+                .Select(fan =>
                 {
-                    float red = float.Parse(colorElement.Attribute("red").Value, CultureInfo.InvariantCulture);
-                    float green = float.Parse(colorElement.Attribute("green").Value, CultureInfo.InvariantCulture);
-                    float blue = float.Parse(colorElement.Attribute("blue").Value, CultureInfo.InvariantCulture);
-                    float alpha = float.Parse(colorElement.Attribute("alpha").Value, CultureInfo.InvariantCulture);
-                    color = new Color(red, green, blue, alpha);
-                }
-            }
+                    List<int> indices = fan.Split(' ')
+                                           .Select(int.Parse)
+                                           .ToList();
 
-            IList<Color> colors = new List<Color>();
-
-            for (int i = 0; i < verticies.Count; i++)
-            {
-                colors.Add(color);
-            }
-
-            return fansAttribute.Value.Trim().Split(',')
-                .Select(x => x.Split(' ').Select(y => Convert.ToInt32(y)).ToList())
-                .SelectMany(x => FanToTriangles(x, verticies, normals, colors))
+                    return FanToTriangles(indices, vertices, normals, color);
+                })
+                .SelectMany(tri => tri)
                 .ToList();
+
+            return triangles;
         }
 
-        private static IList<TriangleGeometry> GetStrips(XElement face, IList<Vector3> verticies, IList<Vector3> normals)
+        private static IList<TriangleGeometry> FanToTriangles(List<int> indices, IList<Vector3> vertices, IList<Vector3> normals, Color color)
+        {
+            var triangles = new List<TriangleGeometry>();
+
+            Vector3 sharedVertex = vertices[indices[0]];
+            Vector3 sharedNormal = normals[indices[0]];
+
+            for (int i = 1; i < indices.Count - 1; i++)
+            {
+                Vector3 v1 = vertices[indices[i]];
+                Vector3 v2 = vertices[indices[i + 1]];
+                Vector3 n1 = normals[indices[i]];
+                Vector3 n2 = normals[indices[i + 1]];
+
+                triangles.Add(new TriangleGeometry(
+                    sharedVertex, v1, v2,
+                    sharedNormal, n1, n2,
+                    color, color, color 
+                ));
+            }
+
+            return triangles;
+        }
+
+        private static IList<TriangleGeometry> GetStrips(XElement face, IList<Vector3> vertices, IList<Vector3> normals)
         {
             XAttribute stripsAttributes = face.Attribute("strips");
 
@@ -186,63 +201,73 @@ namespace DS3DXMLImporter.Parsers
                 return new List<TriangleGeometry>();
             }
 
-            XElement surfaceAttributes = face.Element("{http://www.3ds.com/xsd/3DXML}SurfaceAttributes");
-            Color color = new Color(0f, 0f, 0f, 0f);
+            Color color = ExtractColor(face);
 
-            if (surfaceAttributes != null)
-            {
-                XElement colorElement = surfaceAttributes.Element("{http://www.3ds.com/xsd/3DXML}Color");
+            string[] stripsArray = stripsAttributes.Value.Trim().Split(',');
 
-                if (color != null)
+            List<TriangleGeometry> triangles = stripsArray.AsParallel()
+                .Select(strip =>
                 {
-                    float red = float.Parse(colorElement.Attribute("red").Value, CultureInfo.InvariantCulture);
-                    float green = float.Parse(colorElement.Attribute("green").Value, CultureInfo.InvariantCulture);
-                    float blue = float.Parse(colorElement.Attribute("blue").Value, CultureInfo.InvariantCulture);
-                    float alpha = float.Parse(colorElement.Attribute("alpha").Value, CultureInfo.InvariantCulture);
-                    color = new Color(red, green, blue, alpha);
-                }
-            }
+                    List<int> indices = strip.Split(' ')
+                                             .Select(int.Parse)
+                                             .ToList();
 
-            IList<Color> colors = new List<Color>();
-
-            for (int i = 0; i < verticies.Count; i++)
-            {
-                colors.Add(color);
-            }
-
-            return stripsAttributes.Value.Trim().Split(',')
-                .Select(x => x.Split(' ').Select(y => Convert.ToInt32(y)).ToList())
-                .SelectMany(x => StripToTriangles(x, verticies, normals, colors))
+                    return StripToTriangles(indices, vertices, normals, color);
+                })
+                .SelectMany(tri => tri)
                 .ToList();
+
+            return triangles;
         }
 
-        private static IList<TriangleGeometry> FanToTriangles(IList<int> indices, IList<Vector3> verticies, IList<Vector3> normals, IList<Color> colors)
+        private static IList<TriangleGeometry> StripToTriangles(IList<int> indices, IList<Vector3> vertices, IList<Vector3> normals, Color color)
         {
-            int center = indices[0];
-            List<TriangleGeometry> list = new List<TriangleGeometry>();
-
-            for (int i = 1; i < indices.Count - 1; i++)
-            {
-                list.Add(new TriangleGeometry(verticies[center], verticies[indices[i + 1]], verticies[indices[i]], normals[center], normals[indices[i + 1]], normals[indices[i]], colors[center], colors[indices[i + 1]], colors[indices[i]]));
-            }
-
-            return list;
-        }
-
-        private static IList<TriangleGeometry> StripToTriangles(IList<int> indices, IList<Vector3> verticies, IList<Vector3> normals, IList<Color> colors)
-        {
-            List<TriangleGeometry> list = new List<TriangleGeometry>();
-            bool op = true;
+            List<TriangleGeometry> triangles = new List<TriangleGeometry>();
+            bool reverseOrder = true;
 
             for (int i = 1; i < indices.Count - 1; i++)
             {
                 int prev = i - 1;
                 int next = i + 1;
-                list.Add(new TriangleGeometry(verticies[indices[i]], verticies[indices[op ? prev : next]], verticies[indices[op ? next : prev]], normals[indices[i]], normals[indices[op ? prev : next]], normals[indices[op ? next : prev]], colors[indices[i]], colors[indices[op ? prev : next]], colors[indices[op ? next : prev]]));
-                op = !op;
+
+                triangles.Add(new TriangleGeometry(
+                    vertices[indices[i]],
+                    vertices[indices[reverseOrder ? prev : next]],
+                    vertices[indices[reverseOrder ? next : prev]],
+                    normals[indices[i]],
+                    normals[indices[reverseOrder ? prev : next]],
+                    normals[indices[reverseOrder ? next : prev]],
+                    color, color, color
+                ));
+
+                reverseOrder = !reverseOrder;
             }
 
-            return list;
+            return triangles;
+        }
+
+        private static Color ExtractColor(XElement face)
+        {
+            XElement surfaceAttributes = face.Element("{http://www.3ds.com/xsd/3DXML}SurfaceAttributes");
+
+            if (surfaceAttributes == null)
+            {
+                return new Color(0f, 0f, 0f, 0f);
+            }
+
+            XElement colorElement = surfaceAttributes.Element("{http://www.3ds.com/xsd/3DXML}Color");
+
+            if (colorElement == null)
+            {
+                return new Color(0f, 0f, 0f, 0f);
+            }
+
+            return new Color(
+                float.Parse(colorElement.Attribute("red").Value, CultureInfo.InvariantCulture),
+                float.Parse(colorElement.Attribute("green").Value, CultureInfo.InvariantCulture),
+                float.Parse(colorElement.Attribute("blue").Value, CultureInfo.InvariantCulture),
+                float.Parse(colorElement.Attribute("alpha").Value, CultureInfo.InvariantCulture)
+            );
         }
 
         private static IList<XElement> GetBagRepXmlElements(XDocument threeDReferenceRepXmlElement)
@@ -269,38 +294,26 @@ namespace DS3DXMLImporter.Parsers
 
         private static IList<Vector3> GetVerticesFromXml(XElement bagRep, float scale)
         {
-            IEnumerable<XElement> vertexPositionsXml = bagRep.Descendants("{http://www.3ds.com/xsd/3DXML}Positions").Where(x => x.Parent.Name.LocalName == "VertexBuffer");
+            XElement vertexPositionXml = bagRep.Descendants("{http://www.3ds.com/xsd/3DXML}Positions")
+                                               .FirstOrDefault(x => x.Parent.Name.LocalName == "VertexBuffer");
 
-            if (vertexPositionsXml.Count() > 1)
+            if (vertexPositionXml == null)
             {
-                throw new ArgumentException(string.Format(@"Too much <Positions> tag in root {0}", bagRep.Document.Root.Name.LocalName));
+                return new List<Vector3>();
             }
 
-            List<Vector3> vertices = new List<Vector3>();
-            XElement vertexPositionXml;
+            string[] coordinatesArray = vertexPositionXml.Value.Split(',');
 
-            try
-            {
-                vertexPositionXml = vertexPositionsXml.First();
-            }
-            catch (Exception)
-            {
-                return vertices;
-            }
-
-            foreach (var cordinates in vertexPositionXml.Value.Split(','))
-            {
-                string[] coordinateAry = cordinates.Split(' ');
-                float x = 0f;
-                float y = 0f;
-                float z = 0f;
-
-                x = float.Parse(coordinateAry[0], CultureInfo.InvariantCulture);
-                y = float.Parse(coordinateAry[1], CultureInfo.InvariantCulture);
-                z = float.Parse(coordinateAry[2], CultureInfo.InvariantCulture);
-
-                vertices.Add(new Vector3(x, z, y) / scale);
-            }
+            List<Vector3> vertices = coordinatesArray.AsParallel()
+                                           .Select(c =>
+                                           {
+                                               string[] coordinateAry = c.Split(' ');
+                                               float x = float.Parse(coordinateAry[0], CultureInfo.InvariantCulture);
+                                               float y = float.Parse(coordinateAry[1], CultureInfo.InvariantCulture);
+                                               float z = float.Parse(coordinateAry[2], CultureInfo.InvariantCulture);
+                                               return new Vector3(x, z, y) / scale;
+                                           })
+                                           .ToList();
 
             if (vertices.Count == 0)
             {
@@ -312,38 +325,26 @@ namespace DS3DXMLImporter.Parsers
 
         private static IList<Vector3> GetNormalsFromXml(XElement bagRep, float scale)
         {
-            IEnumerable<XElement> normalPositionsXml = bagRep.Descendants("{http://www.3ds.com/xsd/3DXML}Normals").Where(x => x.Parent.Name.LocalName == "VertexBuffer");
+            XElement vertexPositionXml = bagRep.Descendants("{http://www.3ds.com/xsd/3DXML}Normals")
+                                               .FirstOrDefault(x => x.Parent.Name.LocalName == "VertexBuffer");
 
-            if (normalPositionsXml.Count() > 1)
+            if (vertexPositionXml == null)
             {
-                throw new ArgumentException(string.Format(@"Too much <Normals> tag in root {0}", bagRep.Document.Root.Name.LocalName));
+                return new List<Vector3>();
             }
 
-            List<Vector3> normals = new List<Vector3>();
-            XElement normalPositionsXML;
+            string[] coordinatesArray = vertexPositionXml.Value.Split(',');
 
-            try
-            {
-                normalPositionsXML = normalPositionsXml.First();
-            }
-            catch (Exception)
-            {
-                return normals;
-            }
-
-            foreach (var cordinates in normalPositionsXML.Value.Split(','))
-            {
-                string[] coordinateAry = cordinates.Split(' ');
-                float x = 0f;
-                float y = 0f;
-                float z = 0f;
-
-                x = float.Parse(coordinateAry[0], CultureInfo.InvariantCulture);
-                y = float.Parse(coordinateAry[1], CultureInfo.InvariantCulture);
-                z = float.Parse(coordinateAry[2], CultureInfo.InvariantCulture);
-
-                normals.Add(new Vector3(x, z, y) / scale);
-            }
+            List<Vector3> normals = coordinatesArray.AsParallel()
+                                           .Select(c =>
+                                           {
+                                               string[] coordinateAry = c.Split(' ');
+                                               float x = float.Parse(coordinateAry[0], CultureInfo.InvariantCulture);
+                                               float y = float.Parse(coordinateAry[1], CultureInfo.InvariantCulture);
+                                               float z = float.Parse(coordinateAry[2], CultureInfo.InvariantCulture);
+                                               return new Vector3(x, z, y) / scale;
+                                           })
+                                           .ToList();
 
             if (normals.Count == 0)
             {

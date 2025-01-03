@@ -9,8 +9,6 @@ namespace DS3XMLImporter.Models.Interfaces
 
         XDocument GetNextDocument(string name);
 
-        XDocument GetCATMaterials(DS3DXMLHeader header);
-
         IList<string> ContainedFiles { get; }
     }
 }
