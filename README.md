@@ -48,8 +48,7 @@ Welcome to **DS3DXMLImporter**! This project provides a robust solution for impo
 ## 🛠️ Installation
 
 1. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/DS3DXMLImporter.git
+   `git clone https://github.com/yourusername/DS3DXMLImporter.git`
 
 2. Open your Unity project and add the importer as a package or directly include the `Assets/DS3DXMLImporter` folder.
 
@@ -58,6 +57,34 @@ Welcome to **DS3DXMLImporter**! This project provides a robust solution for impo
 ## 💻 Usage
 
 After adding the importer package, you can begin parsing and loading 3DXML files into Unity with the **DS3DXMLParser**.
+
+```using DS3DXMLImporter;
+
+public class ExampleUsage : MonoBehaviour
+{
+    private void Start()
+    {
+        DS3DXMLParser parser = new DS3DXMLParser(); 
+        parser.OnParseCompleted += OnParseCompleted; 
+        parser.OnParseProgressionChanged += OnParseProgressionChanged; 
+        
+        // Replace 'FILE_PATH' with your actual file path
+        ILoader loader = LoaderFactory.CreateFileLoader("path/to/your/file.3dxml"); 
+        
+        // Start parsing the structure with a scale factor of 1.0f
+        parser.ParseStructure(loader, 1f);
+    }
+
+    private void OnParseProgressionChanged(float progress)
+    {
+        Debug.Log($"Parsing progress: {progress * 100}%");
+    }
+
+    private void OnParseCompleted(DS3DXMLStructure structure)
+    {
+        Debug.Log("3DXML parsing completed successfully!");
+    }
+}```
 
 ---
 
