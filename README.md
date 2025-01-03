@@ -131,7 +131,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 Special thanks to:
 - [Dassault Systèmes](https://www.3ds.com/) for the 3DXML format.
-- The Unity community for their support and tools that make projects like this possible.
+- A special thanks to the creator of the [cad-in-unity](https://github.com/i2e-haw-hamburg/cad-in-unity/tree/master) project that inspired the creation of DS3DXMLImporter
 
 ---
 
@@ -139,7 +139,7 @@ Special thanks to:
 
 For questions or suggestions, feel free to reach out:
 - GitHub Issues: [Submit an issue](https://github.com/ReikanYsora/DS3DXMLImporter/issues)
-- Email: [your.email@example.com](mailto:jcremoux@gmail.com)
+- Email: [jcremoux@gmail.com](mailto:jcremoux@gmail.com)
 
 ---
 
